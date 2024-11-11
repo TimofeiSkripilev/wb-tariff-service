@@ -44,6 +44,18 @@ export class FeesService {
         const today = new Date().toISOString().split("T")[0];
         const fees = await this.feesModel.getAllFees();
 
+        const headers = [
+            "Дата запроса",
+            "Склад",
+            "Формула расчета",
+            "Доставка база",
+            "Доставка литр",
+            "Хранение база",
+            "Хранение литр",
+            "Дата следующего короба",
+            "Дата максимум",
+        ];
+
         const sheetIds = env.GOOGLE_SHEET_IDS?.split(",") || [];
 
         for (const sheetId of sheetIds) {
@@ -51,16 +63,15 @@ export class FeesService {
                 const values = fees
                     .filter((fee) => fee.request_date)
                     .map((fee) => [
-                        fee.request_date,
+                        fee.request_date?.split("T")[0] || "",
                         fee.warehouse_name,
                         fee.box_delivery_and_storage_expr,
                         fee.box_delivery_base,
                         fee.box_delivery_liter,
                         fee.box_storage_base,
                         fee.box_storage_liter,
-                        fee.request_date,
-                        fee.dt_next_box,
-                        fee.dt_till_max,
+                        fee.dt_next_box?.split("T")[0] || "",
+                        fee.dt_till_max?.split("T")[0] || "",
                     ]);
 
                 values.sort((a, b) => {
@@ -69,12 +80,13 @@ export class FeesService {
                     return String(b[0]).localeCompare(String(a[0]));
                 });
 
+                const allValues = [headers, ...values];
                 await sheets.spreadsheets.values.update({
                     spreadsheetId: sheetId.trim(),
                     range: `${env.GOOGLE_SHEET_TAB || "stocks_coefs"}!A2`,
                     valueInputOption: "RAW",
                     requestBody: {
-                        values,
+                        values: allValues,
                     },
                 });
             } catch (error) {
